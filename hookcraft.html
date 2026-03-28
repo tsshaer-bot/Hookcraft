@@ -1,0 +1,462 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Hook Generator</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#F8FAFF;
+  --white:#FFFFFF;
+  --blue:#2563EB;
+  --blue-hover:#1D4ED8;
+  --blue-light:#DBEAFE;
+  --blue-mid:#BFDBFE;
+  --blue-text:#1E40AF;
+  --border:#E2E8F0;
+  --border-focus:#2563EB;
+  --text:#0F172A;
+  --text-secondary:#64748B;
+  --text-muted:#94A3B8;
+  --success:#059669;
+  --danger:#DC2626;
+  --shadow-sm:0 1px 3px rgba(0,0,0,0.08),0 1px 2px rgba(0,0,0,0.04);
+  --shadow-md:0 4px 16px rgba(37,99,235,0.08),0 2px 8px rgba(0,0,0,0.06);
+  --shadow-lg:0 8px 32px rgba(37,99,235,0.12),0 4px 16px rgba(0,0,0,0.06);
+  --r:14px;--r-sm:8px;--r-lg:20px;--r-pill:100px;
+}
+body{
+  font-family:Arial,Helvetica,sans-serif;
+  background:var(--bg);color:var(--text);
+  min-height:100vh;display:flex;flex-direction:column;align-items:center;
+  padding:60px 20px 100px;
+}
+
+/* ── HEADER ── */
+header{text-align:center;margin-bottom:48px;max-width:560px}
+.logo-chip{
+  display:inline-flex;align-items:center;gap:6px;
+  background:var(--blue-light);color:var(--blue-text);
+  font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;
+  padding:5px 14px;border-radius:var(--r-pill);margin-bottom:20px;
+}
+.logo-dot{width:6px;height:6px;border-radius:50%;background:var(--blue)}
+h1{font-size:clamp(2rem,5vw,3rem);font-weight:700;color:var(--text);line-height:1.1;letter-spacing:-.02em}
+h1 span{color:var(--blue)}
+.subtitle{margin-top:12px;color:var(--text-secondary);font-size:15px;line-height:1.6}
+
+/* ── MAIN CARD ── */
+.card{
+  width:100%;max-width:680px;background:var(--white);
+  border:1px solid var(--border);border-radius:var(--r-lg);
+  padding:32px;box-shadow:var(--shadow-lg);
+}
+
+/* ── INPUTS ── */
+.inputs-row{display:flex;gap:14px;margin-bottom:18px}
+.field{flex:1;display:flex;flex-direction:column;gap:7px}
+.field label{
+  font-size:12px;font-weight:700;color:var(--text-secondary);
+  letter-spacing:.04em;text-transform:uppercase;
+}
+.field input{
+  width:100%;background:var(--white);
+  border:1.5px solid var(--border);border-radius:var(--r);
+  color:var(--text);font-family:Arial,Helvetica,sans-serif;
+  font-size:14px;padding:12px 16px;outline:none;
+  transition:border-color .2s,box-shadow .2s;
+}
+.field input::placeholder{color:var(--text-muted)}
+.field input:focus{
+  border-color:var(--border-focus);
+  box-shadow:0 0 0 3px rgba(37,99,235,0.12);
+}
+.field input.err{border-color:var(--danger);box-shadow:0 0 0 3px rgba(220,38,38,0.1)}
+
+/* ── GENERATE BUTTON ── */
+.gen-btn{
+  width:100%;padding:14px;background:var(--blue);color:#fff;
+  font-family:Arial,Helvetica,sans-serif;font-size:15px;font-weight:700;
+  border:none;border-radius:var(--r);cursor:pointer;
+  display:flex;align-items:center;justify-content:center;gap:10px;
+  transition:background .18s,transform .15s,box-shadow .18s;
+  box-shadow:0 2px 8px rgba(37,99,235,0.3);
+}
+.gen-btn:hover:not(:disabled){background:var(--blue-hover);transform:translateY(-1px);box-shadow:0 4px 16px rgba(37,99,235,0.35)}
+.gen-btn:active:not(:disabled){transform:translateY(0);box-shadow:0 2px 8px rgba(37,99,235,0.3)}
+.gen-btn:disabled{opacity:.6;cursor:not-allowed;transform:none}
+.spinner{
+  width:16px;height:16px;border:2.5px solid rgba(255,255,255,0.35);
+  border-top-color:#fff;border-radius:50%;
+  animation:spin .7s linear infinite;display:none;flex-shrink:0;
+}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* ── ERROR BAR ── */
+.error-bar{
+  width:100%;max-width:680px;margin-top:14px;
+  background:#FEF2F2;border:1.5px solid #FECACA;
+  border-radius:var(--r);padding:12px 18px;
+  font-size:13px;color:var(--danger);display:none;font-weight:500;
+}
+.error-bar.show{display:block}
+
+/* ── RESULTS ── */
+#results{width:100%;max-width:680px;margin-top:24px;display:none;flex-direction:column;gap:10px}
+#results.show{display:flex;animation:fadeUp .3s ease both}
+@keyframes fadeUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+
+.results-header{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:0 4px;margin-bottom:2px;
+}
+.results-label{font-size:12px;font-weight:700;color:var(--text-secondary);letter-spacing:.04em;text-transform:uppercase}
+.results-count{
+  font-size:12px;color:var(--blue);font-weight:700;
+  background:var(--blue-light);padding:3px 10px;border-radius:var(--r-pill);
+}
+
+/* ── HOOK CARD ── */
+.hook-card{
+  background:var(--white);border:1.5px solid var(--border);
+  border-radius:var(--r);overflow:hidden;
+  transition:border-color .2s,box-shadow .2s;
+  box-shadow:var(--shadow-sm);
+  animation:fadeUp .35s ease both;
+}
+.hook-card:hover{border-color:var(--blue-mid);box-shadow:var(--shadow-md)}
+.hook-card.open{border-color:var(--blue);box-shadow:var(--shadow-md)}
+
+.hook-top{
+  display:flex;align-items:flex-start;gap:12px;
+  padding:16px 18px;cursor:pointer;user-select:none;
+}
+.hnum{
+  flex-shrink:0;width:28px;height:28px;border-radius:var(--r-sm);
+  background:var(--blue-light);
+  display:grid;place-items:center;
+  font-size:12px;font-weight:700;color:var(--blue-text);margin-top:1px;
+}
+.hook-card.open .hnum{background:var(--blue);color:#fff}
+.htext{flex:1;font-size:14px;line-height:1.6;color:var(--text);font-weight:500}
+.hook-actions{display:flex;align-items:center;gap:8px;flex-shrink:0;margin-top:2px}
+
+.copy-btn{
+  font-size:11px;font-weight:700;color:var(--text-secondary);
+  background:var(--bg);border:1.5px solid var(--border);border-radius:var(--r-pill);
+  padding:4px 12px;cursor:pointer;transition:all .15s;
+  font-family:Arial,Helvetica,sans-serif;white-space:nowrap;
+}
+.copy-btn:hover{background:var(--blue-light);border-color:var(--blue-mid);color:var(--blue-text)}
+.copy-btn.ok{background:var(--blue-light);border-color:var(--blue-mid);color:var(--success)}
+
+.expand-tag{
+  font-size:11px;font-weight:700;color:var(--text-muted);
+  background:var(--bg);border:1.5px solid var(--border);
+  border-radius:var(--r-pill);padding:4px 12px;
+  transition:all .15s;white-space:nowrap;
+}
+.hook-card.open .expand-tag{background:var(--blue-light);border-color:var(--blue-mid);color:var(--blue-text)}
+
+/* ── SCRIPT AREA ── */
+.hook-body{
+  display:none;padding:0 18px 18px 58px;
+  flex-direction:column;gap:12px;
+  border-top:1.5px solid var(--border);
+  background:var(--bg);
+}
+.hook-card.open .hook-body{display:flex}
+
+.script-label{
+  font-size:11px;font-weight:700;color:var(--text-secondary);
+  letter-spacing:.06em;text-transform:uppercase;
+  padding-top:14px;
+}
+.script-body{
+  font-size:14px;line-height:1.75;color:var(--text-secondary);
+  background:var(--white);border:1.5px solid var(--border);
+  border-radius:var(--r);padding:16px;
+}
+.script-copy{
+  align-self:flex-start;font-size:11px;font-weight:700;
+  color:var(--text-secondary);background:var(--white);
+  border:1.5px solid var(--border);border-radius:var(--r-pill);
+  padding:5px 14px;cursor:pointer;transition:all .15s;
+  font-family:Arial,Helvetica,sans-serif;
+}
+.script-copy:hover{background:var(--blue-light);border-color:var(--blue-mid);color:var(--blue-text)}
+.script-copy.ok{background:var(--blue-light);border-color:var(--blue-mid);color:var(--success)}
+
+.script-btn{
+  align-self:flex-start;padding:9px 20px;
+  background:var(--blue);color:#fff;
+  font-family:Arial,Helvetica,sans-serif;font-size:13px;font-weight:700;
+  border:none;border-radius:var(--r-pill);cursor:pointer;
+  display:flex;align-items:center;gap:8px;
+  transition:background .18s,transform .15s,box-shadow .18s;
+  box-shadow:0 2px 8px rgba(37,99,235,0.25);
+}
+.script-btn:hover:not(:disabled){background:var(--blue-hover);transform:translateY(-1px);box-shadow:0 4px 12px rgba(37,99,235,0.3)}
+.script-btn:active:not(:disabled){transform:translateY(0)}
+.script-btn:disabled{opacity:.6;cursor:not-allowed;transform:none}
+
+.mini-spin{
+  width:12px;height:12px;border:2px solid rgba(255,255,255,.35);
+  border-top-color:#fff;border-radius:50%;
+  animation:spin .7s linear infinite;flex-shrink:0;display:none;
+}
+.error-text{font-size:13px;color:var(--danger);font-weight:500}
+
+/* ── FOOTER ── */
+footer{
+  margin-top:56px;text-align:center;
+  font-size:12px;color:var(--text-muted);
+}
+
+@media(max-width:520px){
+  .inputs-row{flex-direction:column}
+  .hook-body{padding-left:18px}
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo-chip"><span class="logo-dot"></span>AI-Powered</div>
+  <h1>Hook <span>Generator</span></h1>
+  <p class="subtitle">Generate scroll-stopping hooks for any niche and topic — powered by Claude.</p>
+</header>
+
+<div class="card">
+  <div class="inputs-row">
+    <div class="field">
+      <label>Niche</label>
+      <input type="text" id="niche" placeholder="e.g. Personal Finance" autocomplete="off" onkeydown="if(event.key==='Enter')generate()"/>
+    </div>
+    <div class="field">
+      <label>Topic</label>
+      <input type="text" id="topic" placeholder="e.g. Save $1k in 30 days" autocomplete="off" onkeydown="if(event.key==='Enter')generate()"/>
+    </div>
+  </div>
+  <button class="gen-btn" id="genBtn" onclick="generate()">
+    <div class="spinner" id="spinner"></div>
+    <span id="genLabel">Generate Hooks</span>
+  </button>
+</div>
+
+<div class="error-bar" id="errorBar"></div>
+<div id="results"></div>
+
+<footer>Built with Claude · Anthropic</footer>
+
+<script>
+// ── CONFIG ──
+const API_KEY = 'YOUR_API_KEY_HERE';
+const MODEL_HOOKS   = 'claude-sonnet-4-20250514';
+const MODEL_SCRIPTS = 'claude-haiku-4-5-20251001';
+
+let hooks = [], scripts = {}, scriptLoading = {};
+let currentNiche = '', currentTopic = '';
+
+function copyText(text, btn) {
+  navigator.clipboard.writeText(text).then(() => {
+    const orig = btn.textContent;
+    btn.textContent = 'Copied!'; btn.classList.add('ok');
+    setTimeout(() => { btn.textContent = orig; btn.classList.remove('ok'); }, 1800);
+  });
+}
+
+async function callClaude(prompt, model, maxTokens) {
+  const res = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': API_KEY,
+      'anthropic-version': '2023-06-01',
+      'anthropic-dangerous-direct-browser-access': 'true'
+    },
+    body: JSON.stringify({
+      model, max_tokens: maxTokens,
+      messages: [{ role: 'user', content: prompt }]
+    })
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err?.error?.message || `API error ${res.status}`);
+  }
+  const data = await res.json();
+  return data.content.filter(b => b.type === 'text').map(b => b.text).join('');
+}
+
+function hookPrompt(n, t) {
+  return `You are a world-class direct-response hook writer for short-form video content.
+Generate 10 hooks for:
+Niche: ${n}
+Topic: ${t}
+
+QUALITY BENCHMARK — match or exceed these exactly:
+- "I know exactly what I spend on rent, subscriptions, and food — it's the number I can't explain that's the problem."
+- "My bank sent a low balance alert while I was mid-transfer into what I thought was a responsible decision."
+- "I got the raise. Set up the automatic savings. Felt sorted. Checked my account 90 days later and went quiet."
+- "The money was there every month. I just kept making decisions slightly faster than I could track them."
+
+MANDATORY HOOK PATTERN — every hook must follow this exact structure:
+1. First person, specific situation (real and grounded)
+2. Something feels slightly off — tension builds
+3. Ends with ONE of: a realization that reframes everything / a contradiction that doesn't resolve / internal tension left open
+
+TIGHTNESS RULES:
+- Maximum 20 words per hook
+- Every word must earn its place — cut anything that delays the punch
+- No over-explanation — stop before it resolves
+- The "turn" must land in the final 4–6 words
+
+HARD RULES:
+- No two hooks can follow the same structure or rhythm
+- No generic phrases: "nobody told you", "this trick", "you're doing it wrong"
+- No hooks that sound like lessons, reflections, or advice
+- No hooks that feel "safe" or "relatable but predictable"
+- Each hook must come from a completely different angle and situation
+
+SELF-CHECK before outputting each hook — rewrite if it fails:
+- Under 20 words? Starts mid-situation? Ending lands hard? Stops a scroller in 2 seconds?
+
+OUTPUT: Numbered list only. No labels, no explanations, no extra text.`;
+}
+
+function scriptPrompt(hook, n, t) {
+  return `Write a punchy 15-second short-form video script for this hook.
+Hook: "${hook}"
+Niche: ${n} | Topic: ${t}
+- First line continues the hook directly
+- One idea, zero filler, bold tone
+- End with a single punchy statement, no CTA
+Output ONLY the script.`;
+}
+
+async function generate() {
+  const n = document.getElementById('niche').value.trim();
+  const t = document.getElementById('topic').value.trim();
+  let bad = false;
+  if (!n) { document.getElementById('niche').classList.add('err'); bad = true; }
+  else document.getElementById('niche').classList.remove('err');
+  if (!t) { document.getElementById('topic').classList.add('err'); bad = true; }
+  else document.getElementById('topic').classList.remove('err');
+  if (bad) return;
+
+  currentNiche = n; currentTopic = t;
+  hooks = []; scripts = {}; scriptLoading = {};
+  setLoading(true); hideError();
+  document.getElementById('results').classList.remove('show');
+  document.getElementById('results').innerHTML = '';
+
+  try {
+    const raw = await callClaude(hookPrompt(n, t), MODEL_HOOKS, 1200);
+    hooks = raw.split('\n')
+      .map(l => l.replace(/^\s*\d+[\.\)]\s*/, '').replace(/^[-•]\s*/, '').trim())
+      .filter(l => l.length > 10).slice(0, 10);
+    if (!hooks.length) throw new Error('No hooks returned. Please try again.');
+    renderHooks();
+  } catch(e) {
+    showError(e.message || 'Something went wrong. Please try again.');
+  } finally {
+    setLoading(false);
+  }
+}
+
+function setLoading(on) {
+  document.getElementById('genBtn').disabled = on;
+  document.getElementById('spinner').style.display = on ? 'block' : 'none';
+  document.getElementById('genLabel').textContent = on ? 'Generating…' : 'Generate Hooks';
+}
+function showError(msg) { const el = document.getElementById('errorBar'); el.textContent = '⚠ ' + msg; el.classList.add('show'); }
+function hideError() { document.getElementById('errorBar').classList.remove('show'); }
+function escAttr(s) { return s.replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/"/g, '&quot;'); }
+
+function hookCardHTML(i, h, isOpen) {
+  const sa = escAttr(h);
+  return `
+    <div class="hook-top" onclick="toggleHook(${i})">
+      <div class="hnum">${i + 1}</div>
+      <div class="htext">${h}</div>
+      <div class="hook-actions">
+        <button class="copy-btn" onclick="event.stopPropagation();copyText('${sa}',this)">Copy</button>
+        <div class="expand-tag">${isOpen ? 'Close ↑' : 'Script ↓'}</div>
+      </div>
+    </div>
+    <div class="hook-body" ${isOpen ? '' : 'style="display:none"'}>${isOpen ? scriptHTML(i) : ''}</div>`;
+}
+
+function scriptHTML(i) {
+  const sc = scripts[i];
+  const loading = scriptLoading[i];
+  if (loading) {
+    return `<div class="script-label">Script</div>
+      <button class="script-btn" disabled>
+        <div class="mini-spin" style="display:block"></div>Writing script…
+      </button>`;
+  }
+  if (sc) {
+    const ss = escAttr(sc);
+    return `<div class="script-label">Script</div>
+      <div class="script-body">${sc}</div>
+      <button class="script-copy" onclick="copyText('${ss}',this)">Copy Script</button>`;
+  }
+  return `<div class="script-label">Script</div>
+    <button class="script-btn" onclick="event.stopPropagation();loadScript(${i})">Generate Script →</button>`;
+}
+
+function renderHooks() {
+  const wrap = document.getElementById('results');
+  wrap.innerHTML = `
+    <div class="results-header">
+      <span class="results-label">Your Hooks</span>
+      <span class="results-count">${hooks.length} generated</span>
+    </div>`;
+  hooks.forEach((h, i) => {
+    const card = document.createElement('div');
+    card.className = 'hook-card'; card.id = `card-${i}`;
+    card.style.animationDelay = `${i * 0.04}s`;
+    card.innerHTML = hookCardHTML(i, h, false);
+    wrap.appendChild(card);
+  });
+  wrap.classList.add('show');
+  setTimeout(() => wrap.scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 100);
+}
+
+function refreshCard(i) {
+  const card = document.getElementById(`card-${i}`);
+  if (!card) return;
+  card.innerHTML = hookCardHTML(i, hooks[i], card.classList.contains('open'));
+}
+
+function toggleHook(i) {
+  const card = document.getElementById(`card-${i}`);
+  if (!card) return;
+  const isOpen = card.classList.contains('open');
+  document.querySelectorAll('.hook-card.open').forEach(c => {
+    const idx = parseInt(c.id.replace('card-', ''));
+    c.classList.remove('open');
+    c.innerHTML = hookCardHTML(idx, hooks[idx], false);
+  });
+  if (isOpen) return;
+  card.classList.add('open');
+  card.innerHTML = hookCardHTML(i, hooks[i], true);
+}
+
+async function loadScript(i) {
+  if (scriptLoading[i] || scripts[i]) return;
+  scriptLoading[i] = true;
+  refreshCard(i);
+  try {
+    scripts[i] = (await callClaude(scriptPrompt(hooks[i], currentNiche, currentTopic), MODEL_SCRIPTS, 350)).trim();
+  } catch(e) {
+    scripts[i] = null;
+  }
+  delete scriptLoading[i];
+  if (document.getElementById(`card-${i}`)?.classList.contains('open')) refreshCard(i);
+}
+</script>
+</body>
+</html>
